@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MedTime App (MTA) — Interactive Prototype</title>
+<style>
+  :root{
+    --teal:#0d9488; --teal-dark:#0f766e; --navy:#0f172a; --ink:#1e293b;
+    --coral:#e11d48; --amber:#f59e0b; --bg-grad:linear-gradient(135deg,#0f172a 0%,#134e4a 100%);
+    --card:#ffffff; --line:#e2e8f0; --muted:#64748b;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{
+    font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+    background:var(--bg-grad); color:#e2e8f0; min-height:100vh;
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .stage{display:flex; gap:28px; align-items:stretch; max-width:1280px; width:100%;}
+  .side{flex:1; display:flex; flex-direction:column; gap:14px; min-width:0;}
+  .side h1{font-size:26px; line-height:1.2; color:#fff;}
+  .side h1 span{color:#5eead4}
+  .tag{display:inline-block; background:rgba(94,234,212,.15); color:#5eead4; font-size:12px;
+       font-weight:700; padding:4px 12px; border-radius:99px; letter-spacing:.5px; width:fit-content}
+  .fcard{background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
+         border-radius:14px; padding:14px 16px; backdrop-filter:blur(4px);}
+  .fcard h3{font-size:14px; color:#5eead4; margin-bottom:6px; display:flex; align-items:center; gap:8px}
+  .fcard p{font-size:13px; line-height:1.5; color:#cbd5e1}
+  .fcard .big{font-size:22px}
+  .kv{display:flex; justify-content:space-between; font-size:12px; padding:3px 0; color:#94a3b8}
+  .kv b{color:#e2e8f0; font-weight:600}
+  .demo-btn{background:var(--amber); color:#1e293b; border:none; border-radius:12px;
+            padding:13px; font-size:15px; font-weight:800; cursor:pointer; width:100%;
+            box-shadow:0 4px 14px rgba(245,158,11,.35)}
+  .demo-btn:hover{filter:brightness(1.07)}
+  .demo-btn:active{transform:scale(.97)}
+  .hint{font-size:12px; color:#94a3b8; line-height:1.5}
+
+  /* ============ PHONE ============ */
+  .phone{
+    width:372px; height:780px; background:#000; border-radius:44px; padding:12px;
+    box-shadow:0 0 0 3px #334155, 0 30px 80px rgba(0,0,0,.6); flex-shrink:0;
+    position:relative;
+  }
+  .screen{
+    width:100%; height:100%; background:#f1f5f9; border-radius:34px; overflow:hidden;
+    position:relative; color:var(--ink); display:flex; flex-direction:column;
+  }
+  .statusbar{
+    background:var(--teal-dark); color:#fff; font-size:12px; font-weight:600;
+    display:flex; justify-content:space-between; padding:8px 22px 6px; flex-shrink:0; z-index:5;
+  }
+  .view{
+    position:absolute; top:31px; bottom:0; left:0; right:0; overflow-y:auto;
+    padding:18px 18px 90px; display:none; flex-direction:column; background:#f1f5f9;
+    scrollbar-width:thin;
+  }
+  .view.active{display:flex}
+  .screen.no-nav .tabbar{display:none}
+  .tabbar{
+    position:absolute; bottom:0; left:0; right:0; background:#fff; border-top:1px solid var(--line);
+    display:flex; z-index:6; padding:6px 4px 10px;
+  }
+  .tab{
+    flex:1; display:flex; flex-direction:column; align-items:center; gap:2px;
+    font-size:11px; font-weight:600; color:var(--muted); padding:6px 0 4px; cursor:pointer; border:none; background:none;
+  }
+  .tab .ico{font-size:20px; line-height:1}
+  .tab.active{color:var(--teal-dark)}
+  .tab.active .ico{transform:scale(1.12)}
+
+  /* ============ UI ATOMS ============ */
+  .app-logo{width:84px;height:84px;border-radius:50%;background:var(--teal);
+    display:flex;align-items:center;justify-content:center;font-size:44px;margin:0 auto 14px;
+    box-shadow:0 8px 24px rgba(13,148,136,.4)}
+  .title{font-size:24px; font-weight:800; text-align:center; color:var(--navy); line-height:1.25}
+  .subtitle{font-size:15px; text-align:center; color:var(--muted); margin-top:8px; line-height:1.5}
+  .btn{
+    display:block; width:100%; border:none; border-radius:14px; padding:16px;
+    font-size:17px; font-weight:800; cursor:pointer; margin-top:14px; font-family:inherit;
+  }
+  .btn-primary{background:var(--teal); color:#fff; box-shadow:0 4px 14px rgba(13,148,136,.35)}
+  .btn-primary:hover{background:var(--teal-dark)}
+  .btn-primary:active{transform:scale(.97)}
+  .btn-ghost{background:#fff; color:var(--teal-dark); border:2px solid var(--teal); box-shadow:none}
+  .btn-danger{background:var(--coral); color:#fff}
+  .btn:disabled{opacity:.45; cursor:not-allowed}
+  .field{margin-top:14px}
+  .field label{font-size:13px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px}
+  .field input,.field select{
+    width:100%; margin-top:6px; padding:14px; font-size:17px; border:2px solid var(--line);
+    border-radius:12px; font-family:inherit; background:#fff; color:var(--ink);
+  }
+  .field input:focus{outline:none; border-color:var(--teal)}
+  .chips{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
+  .chip{
+    padding:11px 16px; border-radius:99px; border:2px solid var(--line); background:#fff;
+    font-size:15px; font-weight:600; cursor:pointer; color:var(--ink); font-family:inherit;
+  }
+  .chip.sel{background:var(--teal); border-color:var(--teal); color:#fff}
+  .card{background:#fff; border-radius:16px; padding:16px; margin-top:14px;
+        box-shadow:0 2px 10px rgba(15,23,42,.07)}
+  .card h4{font-size:16px; color:var(--navy); display:flex; align-items:center; gap:8px}
+  .card p{font-size:14px; color:var(--muted); line-height:1.55; margin-top:4px}
+  .greet{font-size:20px; font-weight:800; color:var(--navy)}
+  .dateline{font-size:13px; color:var(--muted); font-weight:600}
+  .status-pill{display:inline-flex; align-items:center; gap:6px; background:#ecfdf5; color:#047857;
+    font-size:13px; font-weight:700; padding:5px 12px; border-radius:99px; margin-top:10px}
+  .status-pill.due{background:#fff7ed; color:#c2410c}
+  .dose{
+    background:#fff; border-radius:16px; padding:16px; margin-top:12px;
+    box-shadow:0 2px 10px rgba(15,23,42,.07); border-left:6px solid var(--amber);
+  }
+  .dose.taken{border-left-color:#10b981}
+  .dose .row1{display:flex; justify-content:space-between; align-items:center}
+  .dose .mname{font-size:18px; font-weight:800; color:var(--navy)}
+  .dose .mtime{font-size:15px; font-weight:700; color:var(--muted)}
+  .dose .meta{font-size:13px; color:var(--muted); margin-top:6px; line-height:1.5}
+  .badge{font-size:12px; font-weight:800; padding:4px 10px; border-radius:99px}
+  .badge.due{background:#fef3c7; color:#92400e}
+  .badge.taken{background:#d1fae5; color:#065f46}
+  .badge.low{background:#fee2e2; color:#991b1b}
+  .offline-bar{
+    background:#134e4a; color:#5eead4; font-size:11px; font-weight:700; text-align:center;
+    padding:5px; letter-spacing:.4px; flex-shrink:0;
+  }
+  .back-row{display:flex; align-items:center; gap:10px; margin-bottom:6px}
+  .back-btn{background:none;border:none;font-size:22px;cursor:pointer;color:var(--teal-dark);padding:4px 8px}
+  .scr-title{font-size:19px; font-weight:800; color:var(--navy)}
+
+  /* ============ ALERT OVERLAY ============ */
+  .overlay{position:absolute; inset:0; z-index:20; display:none; flex-direction:column}
+  .overlay.on{display:flex}
+  .alert-bg{background:linear-gradient(180deg,#7f1d1d,#450a0a); color:#fff; align-items:center;
+            justify-content:center; text-align:center; padding:34px 24px}
+  .bell{font-size:74px; animation:ring 1s infinite}
+  @keyframes ring{0%,100%{transform:rotate(0)}20%{transform:rotate(16deg)}40%{transform:rotate(-14deg)}60%{transform:rotate(10deg)}80%{transform:rotate(-8deg)}}
+  .alert-time{font-size:44px; font-weight:800; letter-spacing:1px; margin-top:10px}
+  .alert-med{font-size:26px; font-weight:800; margin-top:14px; line-height:1.3}
+  .alert-sub{font-size:15px; opacity:.85; margin-top:10px; line-height:1.5}
+  .alert-btn{
+    margin-top:26px; background:#fbbf24; color:#451a03; border:none; border-radius:18px;
+    padding:22px 40px; font-size:23px; font-weight:900; cursor:pointer; font-family:inherit;
+    box-shadow:0 8px 30px rgba(251,191,36,.5); animation:pulse 1.2s infinite;
+  }
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+  .snooze{margin-top:16px; background:none; border:2px solid rgba(255,255,255,.5); color:#fff;
+    border-radius:99px; padding:10px 26px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit}
+
+  /* ============ CAMERA ============ */
+  .cam-bg{background:#0a0f1e; color:#fff; padding:16px; align-items:stretch}
+  .cam-head{font-size:16px; font-weight:800; text-align:center; margin-bottom:10px}
+  .viewfinder{
+    flex:1; min-height:300px; border-radius:18px; position:relative; overflow:hidden;
+    background:radial-gradient(circle at 50% 40%, #1e3a5f 0%, #0a0f1e 75%);
+    display:flex; align-items:center; justify-content:center; border:3px solid #334155;
+  }
+  .vf-pill{font-size:88px; filter:drop-shadow(0 10px 24px rgba(0,0,0,.6))}
+  .vf-stamp{position:absolute; top:12px; left:12px; background:rgba(225,29,72,.9); color:#fff;
+    font-size:11px; font-weight:800; padding:4px 10px; border-radius:6px; letter-spacing:1px}
+  .vf-time{position:absolute; bottom:12px; right:14px; font-size:14px; font-weight:700;
+    background:rgba(0,0,0,.55); padding:4px 10px; border-radius:8px}
+  .vf-grid{position:absolute; inset:0; pointer-events:none;
+    background:
+      linear-gradient(rgba(255,255,255,.08) 1px, transparent 1px) 0 0/100% 33.34%,
+      linear-gradient(90deg, rgba(255,255,255,.08) 1px, transparent 1px) 0 0/33.34% 100%;}
+  .shutter{
+    width:74px; height:74px; border-radius:50%; background:#fff; border:6px solid #475569;
+    margin:18px auto 8px; cursor:pointer; display:block;
+  }
+  .shutter:active{transform:scale(.92)}
+  .cam-hint{text-align:center; font-size:12px; color:#94a3b8; padding-bottom:10px}
+  .proof-img{width:100%; border-radius:14px; border:2px solid var(--line); margin-top:12px; display:block}
+  .proof-ok{background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; border-radius:12px;
+    padding:10px 14px; font-size:13px; font-weight:700; margin-top:12px; text-align:center; line-height:1.5}
+
+  /* ============ HISTORY / CAREGIVER ============ */
+  .stat-row{display:flex; gap:10px; margin-top:14px}
+  .stat{flex:1; background:#fff; border-radius:14px; padding:12px 8px; text-align:center;
+        box-shadow:0 2px 8px rgba(15,23,42,.06)}
+  .stat .n{font-size:24px; font-weight:800; color:var(--teal-dark)}
+  .stat .l{font-size:11px; font-weight:700; color:var(--muted); margin-top:2px}
+  .log-item{background:#fff; border-radius:14px; padding:12px 14px; margin-top:10px;
+            box-shadow:0 2px 8px rgba(15,23,42,.06); display:flex; gap:12px; align-items:center}
+  .log-thumb{width:64px; height:48px; border-radius:8px; object-fit:cover; border:1px solid var(--line); flex-shrink:0}
+  .log-info{flex:1; min-width:0}
+  .log-info .t{font-size:14px; font-weight:800; color:var(--navy)}
+  .log-info .s{font-size:12px; color:var(--muted); margin-top:2px; line-height:1.4}
+  .sms{max-width:85%; padding:10px 14px; border-radius:16px; font-size:13px; line-height:1.5; margin-top:8px}
+  .sms.in{background:#fff; color:var(--ink); border-bottom-left-radius:4px; box-shadow:0 1px 4px rgba(15,23,42,.08)}
+  .sms .who{font-size:11px; font-weight:800; color:var(--teal-dark); margin-bottom:2px}
+  .code-box{background:#0f172a; color:#5eead4; font-family:Consolas,monospace; font-size:20px;
+    font-weight:700; text-align:center; padding:14px; border-radius:12px; letter-spacing:3px; margin-top:10px}
+  .toast{
+    position:absolute; bottom:96px; left:50%; transform:translateX(-50%);
+    background:#0f172a; color:#fff; font-size:13px; font-weight:600; padding:10px 18px;
+    border-radius:99px; z-index:40; opacity:0; transition:opacity .3s; pointer-events:none;
+    white-space:nowrap; box-shadow:0 6px 20px rgba(0,0,0,.35);
+  }
+  .toast.show{opacity:1}
+  .slider{width:100%; margin-top:8px; accent-color:var(--teal)}
+  .radio-row{display:flex; align-items:center; gap:10px; padding:10px 0; font-size:15px; font-weight:600}
+  .radio-row input{width:20px; height:20px; accent-color:var(--teal)}
+  .empty{text-align:center; color:var(--muted); font-size:14px; padding:30px 10px; line-height:1.6}
+  .gear{position:absolute; top:38px; right:14px; z-index:7; background:#fff; border:1px solid var(--line);
+        border-radius:10px; font-size:18px; padding:6px 10px; cursor:pointer; box-shadow:0 2px 6px rgba(15,23,42,.1)}
+  .footnote{font-size:11px; color:#94a3b8; text-align:center; margin-top:10px; line-height:1.5}
+  @media (max-width:1100px){ .side.right{display:none} }
+  @media (max-width:820px){ .side.left{display:none} .phone{transform:scale(.92)} }
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <!-- LEFT INFO PANEL -->
+  <div class="side left">
+    <span class="tag">INTERACTIVE PROTOTYPE</span>
+    <h1>MedTime App <span>(MTA)</span></h1>
+    <div class="fcard">
+      <h3><span class="big">💊</span> What this simulates</h3>
+      <p>Full clickable flow of the MedTime Android app from your proposal — onboarding, medication setup, the loud reminder alert, camera-based dose verification, and offline SMS caregiver alerts. Everything runs locally in this page; no install needed.</p>
+    </div>
+    <div class="fcard">
+      <h3>🎯 Core features from the manuscript</h3>
+      <p>100% offline &amp; no account · loud audio + vibration alerts · automatic pill inventory · mandatory camera photo proof (no faked taps) · caregiver monitoring via offline SMS.</p>
+    </div>
+    <div class="fcard">
+      <h3>📋 Try this walkthrough</h3>
+      <p>1. Onboard (name + Patient role)<br>2. Add a medication (illness, dose times)<br>3. Adjust alert sound/vibration<br>4. Hit <b style="color:#fbbf24">"Fire a demo dose"</b> → take it → capture photo proof<br>5. Check History &amp; Caregiver tabs</p>
+    </div>
+    <p class="footnote">Built from the proposal + storyboard: Lim, Hao, Salaver, Gollena, Bianes — Adviser: C. Burgos</p>
+  </div>
+
+  <!-- PHONE -->
+  <div class="phone">
+    <div class="screen" id="screen">
+      <div class="statusbar"><span id="clock">8:00 AM</span><span>📶 🔋 87%</span></div>
+      <div class="offline-bar">📴 OFFLINE MODE — WORKS WITHOUT INTERNET</div>
+
+      <!-- WELCOME -->
+      <div class="view active" id="v-welcome">
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
+          <div class="app-logo">💊</div>
+          <div class="title">Welcome to<br>MedTime</div>
+          <p class="subtitle">Your reliable medication reminder.<br>Take the right dose, at the right time.</p>
+          <button class="btn btn-primary" onclick="go('v-name')">Get started</button>
+          <p class="footnote">No account · No internet · Elderly-friendly</p>
+        </div>
+      </div>
+
+      <!-- NAME -->
+      <div class="view" id="v-name">
+        <div class="app-logo" style="width:64px;height:64px;font-size:32px">👤</div>
+        <div class="title" style="font-size:22px">What should we call you?</div>
+        <div class="field"><label>Your name</label>
+          <input id="inp-name" type="text" placeholder="Enter name" maxlength="24"></div>
+        <button class="btn btn-primary" onclick="saveName()">Continue</button>
+        <button class="btn btn-ghost" onclick="go('v-welcome')">Back</button>
+      </div>
+
+      <!-- ROLE -->
+      <div class="view" id="v-role">
+        <div class="title" style="font-size:22px">I am a...</div>
+        <p class="subtitle">Choose how you will use MedTime</p>
+        <button class="btn btn-primary" style="font-size:19px;padding:20px" onclick="setRole('patient')">🧑‍🦳 Patient</button>
+        <button class="btn btn-ghost" style="font-size:19px;padding:20px" onclick="setRole('caregiver')">👨‍👩‍👧 Caregiver</button>
+        <div class="card" id="code-card" style="display:none">
+          <h4>🔗 Patient pairing code</h4>
+          <p>Enter the code from the patient's phone to receive their dose alerts.</p>
+          <div class="code-box" id="code-val">MT-4729</div>
+        </div>
+        <button class="btn btn-ghost" onclick="go('v-name')">Back</button>
+      </div>
+
+      <!-- HOME -->
+      <div class="view" id="v-home">
+        <div class="back-row"><span class="scr-title">Today's Schedule</span></div>
+        <div class="greet" id="home-greet">Hello!</div>
+        <div class="dateline" id="home-date"></div>
+        <div id="home-status"></div>
+        <div id="dose-list"></div>
+        <button class="btn btn-primary" onclick="go('v-add1')">➕ Add your med</button>
+        <button class="btn btn-ghost" onclick="go('v-alertcfg')">🔔 Alert sound &amp; vibration</button>
+        <button class="demo-btn" onclick="fireDemo()">⏩ Fire a demo dose now</button>
+      </div>
+      <button class="gear" id="gear-btn" onclick="go('v-alertcfg')" title="Alert settings">⚙️</button>
+
+      <!-- ADD MED 1 -->
+      <div class="view" id="v-add1">
+        <div class="back-row"><button class="back-btn" onclick="go('v-home')">←</button><span class="scr-title">Add Medication</span></div>
+        <div class="field"><label>Illness category</label>
+          <div class="chips" id="ill-chips">
+            <button class="chip" onclick="pickChip(this,'ill')">Fever</button>
+            <button class="chip" onclick="pickChip(this,'ill')">Hypertension</button>
+            <button class="chip" onclick="pickChip(this,'ill')">Cough</button>
+            <button class="chip" onclick="pickChip(this,'ill')">Diabetes</button>
+            <button class="chip" onclick="pickChip(this,'ill')">Other</button>
+          </div></div>
+        <div class="field"><label>Medicine name</label>
+          <input id="inp-med" type="text" placeholder="e.g. Losartan 50mg"></div>
+        <div class="field"><label>Pills in stock</label>
+          <input id="inp-stock" type="number" min="1" value="30"></div>
+        <button class="btn btn-primary" onclick="addNext1()">Continue</button>
+        <button class="btn btn-ghost" onclick="go('v-home')">Cancel</button>
+      </div>
+
+      <!-- ADD MED 2 -->
+      <div class="view" id="v-add2">
+        <div class="back-row"><button class="back-btn" onclick="go('v-add1')">←</button><span class="scr-title">Dose Schedule</span></div>
+        <div class="field"><label>How many times a day?</label>
+          <div class="chips" id="freq-chips">
+            <button class="chip" onclick="pickFreq(this,1)">Once daily</button>
+            <button class="chip" onclick="pickFreq(this,2)">Twice daily</button>
+            <button class="chip" onclick="pickFreq(this,3)">Three times</button>
+          </div></div>
+        <div id="time-inputs"></div>
+        <button class="btn btn-primary" onclick="confirmMed()">✔ Confirm</button>
+        <button class="btn btn-ghost" onclick="go('v-add1')">Back</button>
+      </div>
+
+      <!-- ALERT CONFIG -->
+      <div class="view" id="v-alertcfg">
+        <div class="back-row"><button class="back-btn" onclick="backFromCfg()">←</button><span class="scr-title">Alert Settings</span></div>
+        <div class="card">
+          <h4>🔊 Sound — volume</h4>
+          <input class="slider" type="range" min="0" max="100" value="80" id="snd-vol">
+        </div>
+        <div class="card">
+          <h4>📳 Vibration — intensity</h4>
+          <input class="slider" type="range" min="0" max="100" value="60" id="vib-vol">
+        </div>
+        <div class="card">
+          <h4>🔕 Mute during</h4>
+          <label class="radio-row"><input type="radio" name="mute" onchange="setMute(true)"> Sleep hours (10PM–6AM)</label>
+          <label class="radio-row"><input type="radio" name="mute" checked onchange="setMute(false)"> Never mute</label>
+        </div>
+        <div class="card">
+          <h4>🎵 Alert music</h4>
+          <div class="chips" id="mus-chips">
+            <button class="chip sel" onclick="pickMusic(this,'Chime')">Chime</button>
+            <button class="chip" onclick="pickMusic(this,'Bell')">Bell</button>
+            <button class="chip" onclick="pickMusic(this,'Alarm')">Alarm</button>
+            <button class="chip" onclick="pickMusic(this,'Beep')">Beep</button>
+            <button class="chip" onclick="pickMusic(this,'Soft')">Soft</button>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="saveCfg()">Save settings</button>
+      </div>
+
+      <!-- COMPLETE -->
+      <div class="view" id="v-complete">
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center">
+          <div style="width:110px;height:110px;border-radius:50%;background:#10b981;display:flex;
+               align-items:center;justify-content:center;font-size:56px;color:#fff">✓</div>
+          <div class="title" style="margin-top:18px">Setup complete!</div>
+          <p class="subtitle" id="complete-sub">Your medication reminder is active.</p>
+          <button class="btn btn-primary" style="max-width:280px" onclick="finishSetup()">Go to my schedule</button>
+        </div>
+      </div>
+
+      <!-- MEDS LIST -->
+      <div class="view" id="v-meds">
+        <div class="back-row"><span class="scr-title">My Medications</span></div>
+        <div id="meds-list"></div>
+        <button class="btn btn-primary" onclick="go('v-add1')">➕ Add your med</button>
+      </div>
+
+      <!-- HISTORY -->
+      <div class="view" id="v-history">
+        <div class="back-row"><span class="scr-title">Adherence History</span></div>
+        <div class="stat-row" id="stat-row"></div>
+        <div id="log-list"></div>
+      </div>
+
+      <!-- CAREGIVER -->
+      <div class="view" id="v-care">
+        <div class="back-row"><span class="scr-title">Caregiver Alerts</span></div>
+        <div class="card">
+          <h4>📱 Offline SMS mirror</h4>
+          <p>Alerts the caregiver receives — sent via SMS, no internet needed.</p>
+          <div class="code-box">MT-4729</div>
+        </div>
+        <div id="sms-list"></div>
+      </div>
+
+      <!-- ALERT OVERLAY -->
+      <div class="overlay alert-bg" id="ov-alert">
+        <div class="bell">🔔</div>
+        <div class="alert-time" id="alert-time">8:00 AM</div>
+        <div class="alert-med" id="alert-med">Time to take your medicine</div>
+        <div class="alert-sub" id="alert-sub">Losartan 50mg · 1 pill</div>
+        <button class="alert-btn" onclick="openCamera()">TAKE NOW</button>
+        <button class="snooze" onclick="snooze()">Snooze 10 min</button>
+      </div>
+
+      <!-- CAMERA OVERLAY -->
+      <div class="overlay cam-bg" id="ov-cam">
+        <div class="cam-head">📷 Verify your dose — photo required</div>
+        <div class="viewfinder" id="viewfinder">
+          <div class="vf-grid"></div>
+          <div class="vf-stamp">● REC VERIFY</div>
+          <div class="vf-pill">💊</div>
+          <div class="vf-time" id="vf-time">8:00 AM</div>
+        </div>
+        <button class="shutter" onclick="captureProof()" title="Capture"></button>
+        <div class="cam-hint">Show the pill in frame, then tap to capture</div>
+      </div>
+
+      <!-- PROOF OVERLAY -->
+      <div class="overlay" id="ov-proof" style="background:#f1f5f9;overflow-y:auto;padding:18px">
+        <div class="scr-title" style="text-align:center">Proof captured</div>
+        <canvas id="proof-canvas" class="proof-img" width="320" height="240"></canvas>
+        <div class="proof-ok">✓ Photo proof saved with timestamp<br><span id="proof-meta"></span></div>
+        <button class="btn btn-primary" onclick="saveProof()">Save &amp; log dose</button>
+        <button class="btn btn-ghost" onclick="retake()">Retake</button>
+      </div>
+
+      <!-- TABBAR -->
+      <div class="tabbar">
+        <button class="tab active" data-v="v-home" onclick="tab(this)"><span class="ico">🏠</span>Home</button>
+        <button class="tab" data-v="v-meds" onclick="tab(this)"><span class="ico">💊</span>Meds</button>
+        <button class="tab" data-v="v-history" onclick="tab(this)"><span class="ico">📋</span>History</button>
+        <button class="tab" data-v="v-care" onclick="tab(this)"><span class="ico">👨‍👩‍👧</span>Caregiver</button>
+      </div>
+
+      <div class="toast" id="toast"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="side right">
+    <div class="fcard">
+      <h3>⚡ Live simulation</h3>
+      <div class="kv"><span>Meds registered</span><b id="r-meds">0</b></div>
+      <div class="kv"><span>Doses today</span><b id="r-doses">0</b></div>
+      <div class="kv"><span>Verified taken</span><b id="r-taken">0</b></div>
+      <div class="kv"><span>Avg response time</span><b id="r-resp">—</b></div>
+    </div>
+    <button class="demo-btn" onclick="fireDemo()">⏩ Fire a demo dose now</button>
+    <div class="fcard">
+      <h3>🔬 Research hooks (from your proposal)</h3>
+      <p>• <b>Response time</b> = seconds from alert to photo proof — logged per dose in History.<br>
+         • <b>Consistency of intake</b> = verified doses ÷ scheduled doses (stat card).<br>
+         • Photo proof replaces the "easily faked" tap-to-confirm button.</p>
+    </div>
+    <div class="fcard">
+      <h3>🛠 What "the real app" needs</h3>
+      <p>Android (Kotlin/Java): AlarmManager for exact-time alerts, CameraX for capture, Room DB for offline storage, SmsManager for caregiver alerts. This page validates the flow &amp; UI before coding.</p>
+    </div>
+    <p class="footnote">Prototype only — data resets on refresh.</p>
+  </div>
+</div>
+
+<script>
+/* ================= STATE ================= */
+const S = {
+  name:'', role:'patient',
+  meds:[], logs:[], sms:[],
+  draft:{ill:null, freq:1, times:['08:00']},
+  cfg:{vol:80, vib:60, mute:false, music:'Chime'},
+  pendingDose:null, alertShownAt:0, lastProof:null, beepTimer:null,
+  caregiverCode:'MT-4729',
+  setupDone:false, cfgReturn:'v-home'
+};
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2,'0');
+const fmt12 = t => { let [h,m]=t.split(':').map(Number);
+  const ap=h>=12?'PM':'AM'; h=h%12||12; return h+':'+pad(m)+' '+ap; };
+const now12 = () => { const d=new Date();
+  return fmt12(pad(d.getHours())+':'+pad(d.getMinutes())); };
+
+/* ================= NAV ================= */
+function go(v){
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+  $(v).classList.add('active');
+  const tabViews=['v-home','v-meds','v-history','v-care'];
+  $('screen').classList.toggle('no-nav', !tabViews.includes(v));
+  $('gear-btn').style.display = (v==='v-home') ? 'block':'none';
+  if(v==='v-home') renderHome();
+  if(v==='v-meds') renderMeds();
+  if(v==='v-history') renderHistory();
+  if(v==='v-care') renderCare();
+  if(v==='v-alertcfg'){ $('snd-vol').value=S.cfg.vol; $('vib-vol').value=S.cfg.vib; }
+}
+function tab(btn){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  go(btn.dataset.v);
+}
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2200); }
+
+/* ================= ONBOARDING ================= */
+function saveName(){
+  const n=$('inp-name').value.trim();
+  if(!n){ toast('Please enter your name'); return; }
+  S.name=n; go('v-role');
+}
+function setRole(r){
+  S.role=r;
+  $('code-card').style.display = (r==='caregiver')?'block':'none';
+  if(r==='patient'){ startApp(); }
+  else{
+    /* caregiver quick start with sample patient */
+    S.name='Aling Rosa';
+    if(!S.meds.length) seedSample();
+    S.setupDone=true; go('v-care'); toast('Caregiver mode — paired with '+S.caregiverCode);
+  }
+}
+function startApp(){
+  if(S.meds.length){ renderAll(); go('v-home'); return; }
+  go('v-add1');
+}
+
+/* ================= ADD MED ================= */
+function pickChip(el,grp){
+  el.parentElement.querySelectorAll('.chip').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+  if(grp==='ill') S.draft.ill=el.textContent;
+}
+function addNext1(){
+  const name=$('inp-med').value.trim();
+  if(!S.draft.ill){ toast('Pick an illness category'); return; }
+  if(!name){ toast('Enter the medicine name'); return; }
+  S.draft.name=name; S.draft.stock=Math.max(1,parseInt($('inp-stock').value)||30);
+  S.draft.freq=1; S.draft.times=['08:00'];
+  go('v-add2'); renderTimeInputs();
+}
+function pickFreq(el,n){
+  el.parentElement.querySelectorAll('.chip').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+  S.draft.freq=n;
+  const def={1:['08:00'],2:['08:00','20:00'],3:['08:00','14:00','20:00']};
+  S.draft.times=def[n].slice();
+  renderTimeInputs();
+}
+function renderTimeInputs(){
+  const wrap=$('time-inputs'); wrap.innerHTML='';
+  S.draft.times.forEach((t,i)=>{
+    const d=document.createElement('div'); d.className='field';
+    d.innerHTML='<label>Dose '+(i+1)+' time</label><input type="time" value="'+t+'" onchange="S.draft.times['+i+']=this.value">';
+    wrap.appendChild(d);
+  });
+}
+function confirmMed(){
+  S.meds.push({ id:Date.now(), name:S.draft.name, ill:S.draft.ill,
+    times:S.draft.times.slice(), stock:S.draft.stock });
+  S.setupDone=true;
+  $('complete-sub').textContent = S.draft.name+' ('+S.draft.ill+') reminder is active.';
+  go('v-complete');
+}
+function finishSetup(){
+  $('inp-med').value=''; $('inp-stock').value=30;
+  document.querySelectorAll('#ill-chips .chip').forEach(c=>c.classList.remove('sel'));
+  S.draft.ill=null;
+  go('v-home');
+}
+
+/* ================= RENDERERS ================= */
+function todayDoses(){
+  const out=[];
+  S.meds.forEach(m=>m.times.forEach(t=>{
+    const taken = S.logs.find(l=>l.medId===m.id && l.time===t && l.day===dayKey());
+    out.push({ med:m, time:t, taken:!!taken });
+  }));
+  return out.sort((a,b)=>a.time.localeCompare(b.time));
+}
+function dayKey(){ const d=new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+
+function renderAll(){
+  renderHome(); renderMeds(); renderHistory(); renderCare(); refreshStats();
+}
+function renderHome(){
+  if(!S.name) return;
+  $('home-greet').textContent='Hello, '+S.name+'!';
+  const d=new Date();
+  $('home-date').textContent=d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  const doses=todayDoses();
+  const due=doses.filter(x=>!x.taken).length;
+  const pill=$('home-status');
+  pill.innerHTML = due===0
+    ? '<span class="status-pill">✓ All caught up — no medication due right now!</span>'
+    : '<span class="status-pill due">⏰ '+due+' dose'+(due>1?'s':'')+' due today</span>';
+  const list=$('dose-list'); list.innerHTML='';
+  if(!doses.length){
+    list.innerHTML='<div class="empty">No medications yet.<br>Tap "Add your med" to create your first reminder.</div>';
+  }
+  doses.forEach(x=>{
+    const low = x.med.stock<=3;
+    const el=document.createElement('div');
+    el.className='dose'+(x.taken?' taken':'');
+    el.innerHTML =
+      '<div class="row1"><span class="mname">'+x.med.name+'</span><span class="mtime">'+fmt12(x.time)+'</span></div>'+
+      '<div class="meta">'+x.med.ill+' · '+x.med.times.length+'× daily · '+x.med.stock+' pills in stock '+
+      (low?'<span class="badge low">LOW STOCK</span>':'')+'</div>'+
+      (x.taken?'<div class="meta" style="color:#059252;font-weight:700">✓ Verified taken with photo proof</div>'
+              :'<span class="badge due">DUE</span>');
+    list.appendChild(el);
+  });
+  refreshStats();
+}
+function renderMeds(){
+  const list=$('meds-list'); list.innerHTML='';
+  if(!S.meds.length){ list.innerHTML='<div class="empty">No medications registered.</div>'; return; }
+  S.meds.forEach(m=>{
+    const el=document.createElement('div'); el.className='card';
+    el.innerHTML='<h4>💊 '+m.name+' <button style="margin-left:auto;background:none;border:none;color:#e11d48;font-size:16px;cursor:pointer" onclick="delMed('+m.id+')">✕</button></h4>'+
+      '<p>'+m.ill+' · '+m.times.map(fmt12).join(', ')+'<br>'+m.stock+' pills in stock'+(m.stock<=3?' — <b style="color:#e11d48">refill soon</b>':'')+'</p>';
+    list.appendChild(el);
+  });
+}
+function delMed(id){
+  S.meds=S.meds.filter(m=>m.id!==id);
+  renderAll(); go('v-meds'); toast('Medication removed');
+}
+function renderHistory(){
+  const doses=todayDoses();
+  const taken=S.logs.filter(l=>l.day===dayKey()).length;
+  const sched=S.meds.reduce((a,m)=>a+m.times.length,0);
+  const pct = sched? Math.round(taken/sched*100):0;
+  const resp=S.logs.length? Math.round(S.logs.reduce((a,l)=>a+l.respSec,0)/S.logs.length):0;
+  $('stat-row').innerHTML=
+    '<div class="stat"><div class="n">'+sched+'</div><div class="l">SCHEDULED</div></div>'+
+    '<div class="stat"><div class="n">'+taken+'</div><div class="l">VERIFIED</div></div>'+
+    '<div class="stat"><div class="n">'+pct+'%</div><div class="l">CONSISTENCY</div></div>';
+  const list=$('log-list'); list.innerHTML='';
+  if(!S.logs.length){ list.innerHTML='<div class="empty">No doses logged yet.<br>Fire a demo dose to see the verification flow.</div>'; return; }
+  [...S.logs].reverse().forEach(l=>{
+    const el=document.createElement('div'); el.className='log-item';
+    el.innerHTML='<img class="log-thumb" src="'+l.photo+'">'+
+      '<div class="log-info"><div class="t">'+l.medName+' — '+fmt12(l.time)+'</div>'+
+      '<div class="s">Taken '+fmt12(l.takenAt)+' · response <b>'+l.respSec+'s</b> · photo proof ✓</div></div>';
+    list.appendChild(el);
+  });
+}
+function renderCare(){
+  const list=$('sms-list');
+  if(!S.sms.length){ list.innerHTML='<div class="empty">No alerts sent yet.<br>When a dose is verified, the caregiver gets an SMS like below.</div>'; return; }
+  list.innerHTML='';
+  [...S.sms].reverse().forEach(m=>{
+    const el=document.createElement('div'); el.className='sms in';
+    el.innerHTML='<div class="who">📩 SMS · '+m.when+'</div>'+m.text;
+    list.appendChild(el);
+  });
+}
+function refreshStats(){
+  $('r-meds').textContent=S.meds.length;
+  $('r-doses').textContent=todayDoses().length;
+  $('r-taken').textContent=S.logs.filter(l=>l.day===dayKey()).length;
+  $('r-resp').textContent = S.logs.length
+    ? Math.round(S.logs.reduce((a,l)=>a+l.respSec,0)/S.logs.length)+'s' : '—';
+}
+
+/* ================= DEMO DOSE + ALERT ================= */
+function seedSample(){
+  S.meds.push({id:1,name:'Losartan 50mg',ill:'Hypertension',times:['08:00','20:00'],stock:12});
+  S.meds.push({id:2,name:'Metformin 500mg',ill:'Diabetes',times:['08:00','12:00','18:00'],stock:28});
+}
+function fireDemo(){
+  if(!S.meds.length){ toast('Add a medication first'); return; }
+  const doses=todayDoses().filter(d=>!d.taken);
+  if(!doses.length){ toast('All doses already verified today'); return; }
+  const dose=doses[0];
+  S.pendingDose=dose;
+  $('alert-time').textContent=now12();
+  $('alert-med').textContent='Time to take '+dose.med.name;
+  $('alert-sub').textContent=dose.med.ill+' · 1 pill · '+fmt12(dose.time)+' schedule';
+  S.alertShownAt=Date.now();
+  $('ov-alert').classList.add('on');
+  startBeep(); shake();
+}
+function snooze(){
+  $('ov-alert').classList.remove('on'); stopBeep();
+  toast('Snoozed 10 minutes');
+}
+function startBeep(){
+  stopBeep();
+  try{
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const g=ctx.createGain(); g.gain.value=(S.cfg.vol/100)*0.5; g.connect(ctx.destination);
+    const o=ctx.createOscillator(); o.type=S.cfg.music==='Soft'?'sine':'square';
+    o.frequency.value=S.cfg.music==='Alarm'?880:S.cfg.music==='Beep'?1000:660;
+    o.connect(g); o.start();
+    o.onended=()=>ctx.close();
+    S.beepTimer=setTimeout(()=>{ try{ctx.close();}catch(e){} },1400);
+    S._beepInt=setInterval(()=>startBeep(),1500);
+  }catch(e){}
+}
+function stopBeep(){
+  clearTimeout(S.beepTimer); clearInterval(S._beepInt);
+  if(navigator.vibrate) navigator.vibrate(0);
+}
+function shake(){
+  if(navigator.vibrate) navigator.vibrate([400,200,400,200,400]);
+  const p=document.querySelector('.phone');
+  p.style.transition='transform .08s'; let i=0;
+  const iv=setInterval(()=>{
+    p.style.transform='translateX('+(i++%2?4:-4)+'px)';
+    if(i>10){ clearInterval(iv); p.style.transform='none'; }
+  },80);
+}
+
+/* ================= CAMERA + PROOF ================= */
+function openCamera(){
+  $('ov-alert').classList.remove('on'); stopBeep();
+  $('vf-time').textContent=now12();
+  $('ov-cam').classList.add('on');
+  clearInterval(S._camClock);
+  S._camClock=setInterval(()=>{ $('vf-time').textContent=now12(); },1000);
+}
+function captureProof(){
+  const c=$('proof-canvas'), x=c.getContext('2d');
+  const g=x.createRadialGradient(160,90,20,160,90,220);
+  g.addColorStop(0,'#1e3a5f'); g.addColorStop(1,'#0a0f1e');
+  x.fillStyle=g; x.fillRect(0,0,320,240);
+  x.font='84px serif'; x.textAlign='center'; x.textBaseline='middle';
+  x.fillText('💊',160,105);
+  x.fillStyle='rgba(225,29,72,.95)'; x.fillRect(12,12,96,24);
+  x.fillStyle='#fff'; x.font='bold 12px sans-serif'; x.textAlign='left';
+  x.fillText('● REC VERIFY',20,29);
+  x.fillStyle='rgba(0,0,0,.6)'; x.fillRect(196,200,112,28);
+  x.fillStyle='#fff'; x.font='bold 14px sans-serif';
+  x.fillText(now12(),206,219);
+  x.fillStyle='#5eead4'; x.font='bold 11px sans-serif'; x.textAlign='left';
+  x.fillText('MedTime proof · '+S.pendingDose.med.name,12,224);
+  S.lastProof=c.toDataURL('image/png');
+  const resp=Math.round((Date.now()-S.alertShownAt)/1000);
+  $('proof-meta').textContent=S.pendingDose.med.name+' · response time '+resp+'s';
+  S._respSec=resp;
+  clearInterval(S._camClock);
+  $('ov-cam').classList.remove('on');
+  $('ov-proof').classList.add('on');
+}
+function retake(){
+  $('ov-proof').classList.remove('on');
+  openCamera();
+}
+function saveProof(){
+  const d=S.pendingDose;
+  const log={ medId:d.med.id, medName:d.med.name, time:d.time, day:dayKey(),
+    takenAt:pad(new Date().getHours())+':'+pad(new Date().getMinutes()),
+    respSec:S._respSec||1, photo:S.lastProof };
+  S.logs.push(log);
+  d.med.stock=Math.max(0,d.med.stock-1);
+  const when=now12();
+  S.sms.push({ when, text:'MedTime: '+S.name+' took '+d.med.name+' at '+log.takenAt+' ✓ (photo proof received).' });
+  S.pendingDose=null;
+  $('ov-proof').classList.remove('on');
+  if(navigator.vibrate) navigator.vibrate(120);
+  renderAll();
+  go('v-home');
+  toast('Dose verified · SMS sent to caregiver 📩');
+}
+
+/* ================= CONFIG ================= */
+function saveCfg(){
+  S.cfg.vol=+$('snd-vol').value; S.cfg.vib=+$('vib-vol').value;
+  go(S.cfgReturn); toast('Alert settings saved');
+}
+function setMute(v){ S.cfg.mute=v; }
+function pickMusic(el,m){
+  el.parentElement.querySelectorAll('.chip').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel'); S.cfg.music=m;
+}
+function backFromCfg(){
+  go(['v-home','v-add1','v-add2'].includes(location.hash.slice(1))?'v-home':'v-home');
+}
+S.cfgReturn='v-home';
+
+/* ================= CLOCK ================= */
+setInterval(()=>{ $('clock').textContent=now12(); },1000);
+$('clock').textContent=now12();
+</script>
+</body>
+</html>
